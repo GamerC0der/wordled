@@ -439,7 +439,6 @@ export default function Home() {
           sC(p => p + keyToAdd);
         }
       } else if (k === 'BACKSPACE') {
-        // Prevent browser back button behavior when input is empty
         e.preventDefault();
       }
     };
