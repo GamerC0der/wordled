@@ -1,7 +1,7 @@
 'use client';
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import clsx from 'clsx';
-import { Target, Calculator, Globe, Shuffle } from 'lucide-react';
+import { Target, Calculator, Globe, Shuffle, Search, X, ArrowLeft } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import 'flag-icons/css/flag-icons.min.css';
 
@@ -75,6 +75,7 @@ export default function Home() {
   const [e, sE] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [showAttemptModal, setShowAttemptModal] = useState(false);
+  const [showCustomModal, setShowCustomModal] = useState(false);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
   const [flippingRow, setFlippingRow] = useState<number | null>(null);
   const [flippingTiles, setFlippingTiles] = useState<Set<number>>(new Set());
@@ -101,6 +102,10 @@ export default function Home() {
   const [isRollingDice, setIsRollingDice] = useState(false);
   const [distanceHistory, setDistanceHistory] = useState<Array<{country: string, distance: number, flagClass: string, isSmall: boolean}>>([]);
   const [selectedRandomMode, setSelectedRandomMode] = useState<'wordle' | 'mathle' | 'geoword' | null>(null);
+  const [customWordList, setCustomWordList] = useState<string[]>([]);
+  const [customSearchTerm, setCustomSearchTerm] = useState('');
+  const [customSelectedMode, setCustomSelectedMode] = useState<'wordle' | 'mathle' | 'geoword' | null>(null);
+  const isProcessingHashRef = useRef(false);
 
   const WL = gameMode === 'mathle' ? 8 : gameMode === 'geoword' ? 6 : 5;
   const MG = 6;
@@ -270,6 +275,92 @@ export default function Home() {
     sE(`Failed to load words from file after ${maxRetries} attempts: ${lastError?.message || 'Unknown error'}`);
   }, [selectEasiestWord, gameMode, WL]);
 
+  const loadCustomWordList = useCallback(async (mode: 'wordle' | 'mathle' | 'geoword') => {
+    try {
+      const fileName = mode === 'mathle' ? '/math-expressions.txt' :
+                      mode === 'geoword' ? '/countries.txt' : '/common-words.txt';
+
+      const response = await fetch(fileName);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const text = await response.text();
+      const words = text.split('\n')
+        .map(word => word.trim().toUpperCase())
+        .filter(word => word.length > 0);
+
+      setCustomWordList(words);
+      setCustomSelectedMode(mode);
+    } catch (error) {
+      console.error('Error loading custom word list:', error);
+      setToastMessage('Failed to load word list');
+      setTimeout(() => setToastMessage(null), 3000);
+    }
+  }, []);
+
+  const selectCustomWord = useCallback(async (word: string, mode: 'wordle' | 'mathle' | 'geoword') => {
+    const hashData = { mode, word };
+    const hash = btoa(JSON.stringify(hashData));
+    const currentHash = window.location.hash.substring(1);
+    if (currentHash !== hash && !isProcessingHashRef.current) {
+      window.history.replaceState(null, '', `#${hash}`);
+    }
+
+    setGameMode(mode);
+    setShowModeModal(false);
+    setShowCustomModal(false);
+    setCustomSearchTerm('');
+    setCustomWordList([]);
+
+    sT(word);
+    sG([]);
+    sC('');
+    sSt('playing');
+    setFlippingRow(null);
+    setFlippingTiles(new Set());
+    setRevealedTiles(new Set());
+    setFadingTiles(new Set());
+    setLetterStates({});
+    setGuessedCountries([]);
+    setLastGuess('');
+    setDistanceHistory([]);
+
+    try {
+      const fileName = mode === 'mathle' ? '/math-expressions.txt' :
+                      mode === 'geoword' ? '/countries.txt' : '/common-words.txt';
+
+      const response = await fetch(fileName);
+      const text = await response.text();
+      const words = text.split('\n')
+        .map(w => w.trim().toUpperCase())
+        .filter(w => w.length > 0);
+      sWL(words);
+    } catch (error) {
+      console.error('Error loading word list for validation:', error);
+    } finally {
+      isProcessingHashRef.current = false;
+      sL(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const hash = window.location.hash.substring(1);
+      if (hash && !isProcessingHashRef.current) {
+        try {
+          const hashData = JSON.parse(atob(hash));
+          if (hashData.mode && hashData.word) {
+            isProcessingHashRef.current = true;
+            selectCustomWord(hashData.word, hashData.mode);
+          }
+        } catch (error) {
+          console.error('Invalid hash:', error);
+        }
+      }
+    }
+  }, []);
+
   const selectMode = useCallback(async (mode: 'wordle' | 'mathle' | 'geoword' | 'random') => {
     if (mode === 'random') {
       setIsRollingDice(true);
@@ -432,7 +523,9 @@ export default function Home() {
     setTimeout(() => {
       setFlippingRow(null);
       setFlippingTiles(new Set());
-      setShowAttemptModal(true);
+      if (gameMode === 'geoword') {
+        setShowAttemptModal(true);
+      }
     }, WL * 150 + 600);
 
     const newLetterStates = { ...letterStates };
@@ -726,17 +819,139 @@ export default function Home() {
             <Globe className="w-5 h-5" />
             GEOWORD
           </button>
-          <button
-            onClick={() => selectMode('random')}
-            className="px-6 py-3 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-semibold flex items-center justify-center gap-2"
-          >
-            <Shuffle className="w-5 h-5" />
-            RANDOM
-          </button>
+          <div className="flex gap-1">
+            <button
+              onClick={() => selectMode('random')}
+              className="flex-1 px-3 py-3 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-semibold flex items-center justify-center gap-2"
+            >
+              <Shuffle className="w-4 h-4" />
+              Random
+            </button>
+            <button
+              onClick={() => {
+                setShowModeModal(false);
+                setShowCustomModal(true);
+              }}
+              className="flex-1 px-3 py-3 bg-orange-500 hover:bg-orange-600 text-white rounded-lg font-semibold flex items-center justify-center gap-2"
+            >
+              <Target className="w-4 h-4" />
+              Custom
+            </button>
+          </div>
         </div>
       </div>
     </div>
   );
+
+  const CustomWordModal = () => {
+    const filteredWords = useMemo(() => {
+      return customWordList.filter(word =>
+        word.toLowerCase().includes(customSearchTerm.toLowerCase())
+      ).slice(0, 100);
+    }, [customWordList, customSearchTerm]);
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+        <div className="bg-gray-900 border border-gray-700 rounded-lg p-6 max-w-md w-full text-center shadow-2xl max-h-[80vh] flex flex-col overflow-hidden">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-2xl font-bold text-white">Select Custom Word</h2>
+            <button
+              onClick={() => {
+                setShowCustomModal(false);
+                setShowModeModal(true);
+                setCustomWordList([]);
+                setCustomSearchTerm('');
+                setCustomSelectedMode(null);
+              }}
+              className="text-gray-400 hover:text-white"
+            >
+              <X className="w-6 h-6" />
+            </button>
+          </div>
+
+          <div className="flex-1 flex flex-col min-h-0">
+            {!customSelectedMode ? (
+              <div className="space-y-4">
+                <p className="text-gray-300 mb-4">Choose a game mode:</p>
+                <div className="grid grid-cols-1 gap-3">
+                  <button
+                    onClick={() => loadCustomWordList('wordle')}
+                    className="px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold flex items-center justify-center gap-2"
+                  >
+                    <Target className="w-5 h-5" />
+                    WORDLE (5-letter words)
+                  </button>
+                  <button
+                    onClick={() => loadCustomWordList('mathle')}
+                    className="px-4 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-semibold flex items-center justify-center gap-2"
+                  >
+                    <Calculator className="w-5 h-5" />
+                    MATHLE (equations)
+                  </button>
+                  <button
+                    onClick={() => loadCustomWordList('geoword')}
+                    className="px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold flex items-center justify-center gap-2"
+                  >
+                    <Globe className="w-5 h-5" />
+                    GEOWORD (countries)
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="mb-4 flex-shrink-0">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                    <input
+                      type="text"
+                      placeholder={`Search ${customSelectedMode === 'wordle' ? 'words' : customSelectedMode === 'mathle' ? 'equations' : 'countries'}...`}
+                      value={customSearchTerm}
+                      onChange={(e) => setCustomSearchTerm(e.target.value)}
+                      className="w-full pl-10 pr-4 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500"
+                      key={`search-${customSelectedMode}`}
+                    />
+                  </div>
+                </div>
+
+                <div className="flex-1 overflow-y-auto custom-scrollbar min-h-0">
+                  <div className="space-y-1">
+                    {filteredWords.map((word) => (
+                      <button
+                        key={word}
+                        onClick={() => selectCustomWord(word, customSelectedMode)}
+                        className="w-full px-3 py-2 text-left bg-gray-800 hover:bg-gray-700 text-white rounded border border-gray-700 hover:border-gray-600 transition-colors"
+                      >
+                        {word}
+                      </button>
+                    ))}
+                  </div>
+                  {filteredWords.length === 0 && customSearchTerm && (
+                    <p className="text-gray-400 text-center py-4">No matches found</p>
+                  )}
+                </div>
+
+                <div className="mt-4 pt-4 border-t border-gray-700 flex-shrink-0">
+                  <button
+                    onClick={() => {
+                      setCustomSelectedMode(null);
+                      setCustomWordList([]);
+                      setCustomSearchTerm('');
+                      setShowCustomModal(false);
+                      setShowModeModal(true);
+                    }}
+                    className="w-full px-4 py-3 bg-gradient-to-r from-gray-700 to-gray-600 hover:from-gray-600 hover:to-gray-500 text-white rounded-lg font-semibold flex items-center justify-center gap-2 transition-all duration-200 hover:scale-105 active:scale-95 shadow-lg hover:shadow-xl"
+                  >
+                    <ArrowLeft className="w-4 h-4" />
+                    Back to Mode Selection
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   const GameModal = () => (
     <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
@@ -785,7 +1000,7 @@ export default function Home() {
             🌍 Distance History
           </h3>
         </div>
-        <div className="space-y-2 max-h-56 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-transparent">
+        <div className="space-y-2 max-h-56 overflow-y-auto custom-scrollbar">
           {distanceHistory.map((entry, index) => (
             <div key={index} className="text-xs text-gray-200 flex justify-between items-center py-1 px-2 rounded-md bg-gray-800/50 hover:bg-gray-700/50 transition-colors duration-200">
               <div className="flex items-center truncate mr-2 min-w-0">
@@ -846,7 +1061,7 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    if (gameMode === 'geoword') return;
+    if (gameMode === 'geoword' || showModeModal || showCustomModal) return;
 
     const h = (e: KeyboardEvent) => {
       const k = e.key.toUpperCase();
@@ -934,6 +1149,14 @@ export default function Home() {
     return (
       <div className="h-screen w-screen bg-black text-white flex flex-col items-center justify-center">
         <ModeModal />
+      </div>
+    );
+  }
+
+  if (showCustomModal) {
+    return (
+      <div className="h-screen w-screen bg-black text-white flex flex-col items-center justify-center">
+        <CustomWordModal />
       </div>
     );
   }
