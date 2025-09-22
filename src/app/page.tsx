@@ -1,8 +1,9 @@
 'use client';
 import { useState, useCallback, useEffect } from 'react';
 import clsx from 'clsx';
-import { Target, Calculator, Globe } from 'lucide-react';
+import { Target, Calculator, Globe, Shuffle } from 'lucide-react';
 import dynamic from 'next/dynamic';
+import 'flag-icons/css/flag-icons.min.css';
 
 const Globe3D = dynamic(() => import('../components/Globe'), { ssr: false });
 
@@ -10,7 +11,7 @@ const Globe3D = dynamic(() => import('../components/Globe'), { ssr: false });
   type G = { char: string; state: S }[];
 
   const calculateDistance = (lat1: number, lng1: number, lat2: number, lng2: number): number => {
-    const R = 3959; // Earth's radius in miles
+    const R = 3959; 
     const dLat = (lat2 - lat1) * Math.PI / 180;
     const dLng = (lng2 - lng1) * Math.PI / 180;
     const a =
@@ -23,24 +24,45 @@ const Globe3D = dynamic(() => import('../components/Globe'), { ssr: false });
 
   const getCountryCoords = (countryName: string) => {
     const country = [
-      { name: 'AUSTRALIA', lat: -25, lng: 135 },
-      { name: 'BRAZIL', lat: -15, lng: -55 },
-      { name: 'CANADA', lat: 60, lng: -100 },
-      { name: 'CHINA', lat: 35, lng: 105 },
-      { name: 'FRANCE', lat: 46, lng: 2 },
-      { name: 'GERMANY', lat: 51, lng: 10 },
-      { name: 'INDIA', lat: 20, lng: 78 },
-      { name: 'ITALY', lat: 41, lng: 12 },
-      { name: 'JAPAN', lat: 36, lng: 138 },
-      { name: 'MEXICO', lat: 23, lng: -102 },
-      { name: 'POLAND', lat: 52, lng: 19 },
-      { name: 'RUSSIA', lat: 60, lng: 100 },
-      { name: 'SPAIN', lat: 40, lng: -4 },
-      { name: 'SWEDEN', lat: 60, lng: 15 },
-      { name: 'TURKEY', lat: 39, lng: 35 },
-      { name: 'UKRAINE', lat: 49, lng: 32 }
+      { name: 'AUSTRALIA', lat: -25, lng: 135, flagClass: 'fi fi-au', isSmall: false },
+      { name: 'BRAZIL', lat: -15, lng: -55, flagClass: 'fi fi-br', isSmall: false },
+      { name: 'CANADA', lat: 60, lng: -100, flagClass: 'fi fi-ca', isSmall: false },
+      { name: 'CHINA', lat: 35, lng: 105, flagClass: 'fi fi-cn', isSmall: false },
+      { name: 'FRANCE', lat: 46, lng: 2, flagClass: 'fi fi-fr', isSmall: false },
+      { name: 'GERMANY', lat: 51, lng: 10, flagClass: 'fi fi-de', isSmall: false },
+      { name: 'INDIA', lat: 20, lng: 78, flagClass: 'fi fi-in', isSmall: false },
+      { name: 'ITALY', lat: 41, lng: 12, flagClass: 'fi fi-it', isSmall: false },
+      { name: 'JAPAN', lat: 36, lng: 138, flagClass: 'fi fi-jp', isSmall: false },
+      { name: 'MEXICO', lat: 23, lng: -102, flagClass: 'fi fi-mx', isSmall: false },
+      { name: 'POLAND', lat: 52, lng: 19, flagClass: 'fi fi-pl', isSmall: false },
+      { name: 'RUSSIA', lat: 60, lng: 100, flagClass: 'fi fi-ru', isSmall: false },
+      { name: 'SPAIN', lat: 40, lng: -4, flagClass: 'fi fi-es', isSmall: false },
+      { name: 'SWEDEN', lat: 60, lng: 15, flagClass: 'fi fi-se', isSmall: false },
+      { name: 'TURKEY', lat: 39, lng: 35, flagClass: 'fi fi-tr', isSmall: false },
+      { name: 'UKRAINE', lat: 49, lng: 32, flagClass: 'fi fi-ua', isSmall: false },
+      { name: 'USA', lat: 40, lng: -100, flagClass: 'fi fi-us', isSmall: false },
+      { name: 'SOUTH KOREA', lat: 36, lng: 128, flagClass: 'fi fi-kr', isSmall: false },
+      { name: 'SOUTH AFRICA', lat: -30, lng: 25, flagClass: 'fi fi-za', isSmall: false },
+      { name: 'ARGENTINA', lat: -34, lng: -64, flagClass: 'fi fi-ar', isSmall: false },
+      { name: 'MONACO', lat: 43.7, lng: 7.4, flagClass: 'fi fi-mc', isSmall: true },
+      { name: 'SAN MARINO', lat: 43.9, lng: 12.4, flagClass: 'fi fi-sm', isSmall: true },
+      { name: 'LIECHTENSTEIN', lat: 47.1, lng: 9.5, flagClass: 'fi fi-li', isSmall: true },
+      { name: 'ANDORRA', lat: 42.5, lng: 1.5, flagClass: 'fi fi-ad', isSmall: true },
+      { name: 'LUXEMBOURG', lat: 49.6, lng: 6.1, flagClass: 'fi fi-lu', isSmall: true },
+      { name: 'MALTA', lat: 35.9, lng: 14.5, flagClass: 'fi fi-mt', isSmall: true },
+      { name: 'ICELAND', lat: 64.9, lng: -19.0, flagClass: 'fi fi-is', isSmall: true },
+      { name: 'VATICAN CITY', lat: 41.9, lng: 12.4, flagClass: 'fi fi-va', isSmall: true },
+      { name: 'NAURU', lat: -0.5, lng: 166.9, flagClass: 'fi fi-nr', isSmall: true },
+      { name: 'TUVALU', lat: -8.5, lng: 179.2, flagClass: 'fi fi-tv', isSmall: true },
+      { name: 'PALAU', lat: 7.5, lng: 134.6, flagClass: 'fi fi-pw', isSmall: true },
+      { name: 'MARSHALL ISLANDS', lat: 7.1, lng: 171.2, flagClass: 'fi fi-mh', isSmall: true },
+      { name: 'KIRIBATI', lat: -3.4, lng: -168.7, flagClass: 'fi fi-ki', isSmall: true },
+      { name: 'MICRONESIA', lat: 6.9, lng: 158.2, flagClass: 'fi fi-fm', isSmall: true },
+      { name: 'SEYCHELLES', lat: -4.6, lng: 55.5, flagClass: 'fi fi-sc', isSmall: true },
+      { name: 'ANTIGUA AND BARBUDA', lat: 17.1, lng: -61.8, flagClass: 'fi fi-ag', isSmall: true },
+      { name: 'BARBADOS', lat: 13.2, lng: -59.5, flagClass: 'fi fi-bb', isSmall: true }
     ].find(c => c.name === countryName);
-    return country ? { lat: country.lat, lng: country.lng } : null;
+    return country ? { lat: country.lat, lng: country.lng, flagClass: country.flagClass, isSmall: country.isSmall } : null;
   };
 
 export default function Home() {
@@ -76,6 +98,9 @@ export default function Home() {
   });
   const [guessedCountries, setGuessedCountries] = useState<string[]>([]);
   const [lastGuess, setLastGuess] = useState<string>('');
+  const [isRollingDice, setIsRollingDice] = useState(false);
+  const [distanceHistory, setDistanceHistory] = useState<Array<{country: string, distance: number, flagClass: string, isSmall: boolean}>>([]);
+  const [selectedRandomMode, setSelectedRandomMode] = useState<'wordle' | 'mathle' | 'geoword' | null>(null);
 
   const WL = gameMode === 'mathle' ? 8 : gameMode === 'geoword' ? 6 : 5;
   const MG = 6;
@@ -152,52 +177,131 @@ export default function Home() {
 
   const fW = useCallback(async (mode?: 'wordle' | 'mathle' | 'geoword') => {
     const startTime = Date.now();
-    try {
-      sL(true);
-      sE(null);
+    const maxRetries = 5;
+    let lastError: Error | null = null;
 
-      if (mode !== undefined) {
-        setGameMode(mode);
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        sL(true);
+        sE(null);
+
+        if (mode !== undefined) {
+          setGameMode(mode);
+        }
+
+        const currentMode = mode !== undefined ? mode : gameMode;
+        const fileName = currentMode === 'mathle' ? '/math-expressions.txt' :
+                        currentMode === 'geoword' ? '/countries.txt' : '/common-words.txt';
+
+        console.log(`Fetching file (attempt ${attempt}/${maxRetries}):`, fileName);
+
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+        const response = await fetch(fileName, {
+          signal: controller.signal,
+          cache: 'no-cache'
+        });
+
+        clearTimeout(timeoutId);
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const text = await response.text();
+        console.log('Raw file content length:', text.length);
+
+        if (!text.trim()) {
+          throw new Error('Empty response from server');
+        }
+
+        const words = text.split('\n')
+          .map(word => word.trim().toUpperCase())
+          .filter(word => word.length === WL && word.length > 0);
+
+        console.log('Filtered words count:', words.length, 'WL:', WL);
+
+        const allWords = [...new Set(words)];
+        sWL(allWords);
+        console.log('Loaded words for', currentMode, ':', allWords.length, 'unique words');
+
+        if (allWords.length === 0) {
+          console.error('No valid words found. Raw text:', text.substring(0, 200));
+          throw new Error(`No ${currentMode === 'mathle' ? 'equations' : currentMode === 'geoword' ? 'countries' : 'words'} loaded`);
+        }
+
+        const selectedWord = currentMode === 'mathle'
+          ? allWords[Math.floor(Math.random() * allWords.length)]
+          : currentMode === 'geoword'
+          ? (() => {
+              const weightedWords = [];
+              for (const word of allWords) {
+                const coords = getCountryCoords(word);
+                const weight = coords?.isSmall ? 1 : 20; 
+                for (let i = 0; i < weight; i++) {
+                  weightedWords.push(word);
+                }
+              }
+              return weightedWords[Math.floor(Math.random() * weightedWords.length)];
+            })()
+          : await selectEasiestWord(allWords);
+        console.log('Selected word:', selectedWord);
+
+        sT(selectedWord);
+        return;
+
+      } catch (error) {
+        console.error(`Error loading words (attempt ${attempt}/${maxRetries}):`, error);
+        lastError = error instanceof Error ? error : new Error('Unknown error');
+
+        if (attempt < maxRetries) {
+          const delay = Math.min(1000 * Math.pow(2, attempt - 1) + Math.random() * 500, 5000);
+          console.log(`Retrying in ${Math.round(delay)}ms...`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
+      } finally {
+        const elapsedTime = Date.now() - startTime;
+        const remainingTime = Math.max(0, 1000 - elapsedTime);
+        setTimeout(() => sL(false), remainingTime);
       }
-
-      const currentMode = mode !== undefined ? mode : gameMode;
-      const fileName = currentMode === 'mathle' ? '/math-expressions.txt' :
-                      currentMode === 'geoword' ? '/countries.txt' : '/common-words.txt';
-      const response = await fetch(fileName);
-      const text = await response.text();
-      const words = text.split('\n')
-        .map(word => word.trim().toUpperCase())
-        .filter(word => word.length === WL && word.length > 0);
-
-      const allWords = [...new Set(words)];
-      sWL(allWords);
-      console.log('Loaded words for', currentMode, ':', allWords);
-      if (allWords.length === 0) {
-        throw new Error(`No ${currentMode === 'mathle' ? 'equations' : currentMode === 'geoword' ? 'countries' : 'words'} loaded`);
-      }
-      const selectedWord = (currentMode === 'mathle' || currentMode === 'geoword')
-        ? allWords[Math.floor(Math.random() * allWords.length)]
-        : await selectEasiestWord(allWords);
-      console.log('Selected word:', selectedWord);
-
-      sT(selectedWord);
-    } catch (error) {
-      sE('Failed to load words from file');
-    } finally {
-      const elapsedTime = Date.now() - startTime;
-      const remainingTime = Math.max(0, 1000 - elapsedTime);
-      setTimeout(() => sL(false), remainingTime);
     }
+
+    sE(`Failed to load words from file after ${maxRetries} attempts: ${lastError?.message || 'Unknown error'}`);
   }, [selectEasiestWord, gameMode, WL]);
 
-  const selectMode = useCallback(async (mode: 'wordle' | 'mathle' | 'geoword') => {
-    setGameMode(mode);
-    setShowModeModal(false);
-    await fW(mode);
+  const selectMode = useCallback(async (mode: 'wordle' | 'mathle' | 'geoword' | 'random') => {
+    if (mode === 'random') {
+      setIsRollingDice(true);
+      setSelectedRandomMode(null);
+      const modes = ['wordle', 'mathle', 'geoword'] as const;
+      let rollCount = 0;
+      const maxRolls = 15;
+      const rollIntervalId = setInterval(() => {
+        setSelectedRandomMode(modes[Math.floor(Math.random() * modes.length)]);
+        rollCount++;
+        if (rollCount >= maxRolls) {
+          clearInterval(rollIntervalId);
+          const finalMode = modes[Math.floor(Math.random() * modes.length)];
+          setSelectedRandomMode(finalMode);
+          setTimeout(async () => {
+            setIsRollingDice(false);
+            setSelectedRandomMode(null);
+            setGameMode(finalMode);
+            setShowModeModal(false);
+            await fW(finalMode);
+          }, 500);
+        }
+      }, 75);
+    } else {
+      setGameMode(mode);
+      setShowModeModal(false);
+      await fW(mode);
+    }
   }, [fW]);
 
   const r = useCallback(async () => {
-    sT(''); // Reset target word first
+    sT('');
     await fW();
     sG([]);
     sC('');
@@ -212,6 +316,7 @@ export default function Home() {
     setLetterStates({});
     setGuessedCountries([]);
     setLastGuess('');
+    setDistanceHistory([]);
   }, [fW, sE, sT]);
 
   const ch = useCallback((guess: string): G => {
@@ -247,9 +352,16 @@ export default function Home() {
       return;
     }
 
+    const guessCoords = getCountryCoords(countryName);
+    const targetCoords = getCountryCoords(t);
+    const distance = guessCoords && targetCoords ? calculateDistance(guessCoords.lat, guessCoords.lng, targetCoords.lat, targetCoords.lng) : 0;
+    const flagClass = guessCoords?.flagClass || '';
+    const isSmall = guessCoords?.isSmall || false;
+
     const newGuessedCountries = [...guessedCountries, countryName];
     setGuessedCountries(newGuessedCountries);
     setLastGuess(countryName);
+    setDistanceHistory(prev => [...prev, { country: countryName, distance, flagClass, isSmall }]);
 
     const isCorrect = countryName === t;
     const newAttempts = newGuessedCountries.length;
@@ -391,12 +503,33 @@ export default function Home() {
   const Toast = () => {
     if (!toastMessage) return null;
 
+    const isAlreadyGuessed = toastMessage === 'Country already guessed!';
+
     return (
       <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 animate-fade-in">
-        <div className="bg-red-600 text-white px-6 py-3 rounded-lg shadow-lg border-2 border-red-500 text-center font-semibold text-lg">
-          <div className="flex items-center gap-2">
-            <span className="text-xl font-bold">!</span>
-            <span>{toastMessage}</span>
+        <div className={`${
+          isAlreadyGuessed
+            ? 'bg-gradient-to-r from-orange-500 to-red-500 border-orange-400'
+            : 'bg-red-600 border-red-500'
+        } text-white px-8 py-4 rounded-xl shadow-2xl border-2 text-center font-bold text-lg animate-pulse`}>
+          <div className="flex items-center justify-center gap-3">
+            <div className={`${
+              isAlreadyGuessed
+                ? 'animate-bounce'
+                : ''
+            } text-2xl`}>
+              {isAlreadyGuessed ? '🚩' : '!'}
+            </div>
+            <div className="flex flex-col items-center">
+              <span className="text-white drop-shadow-lg">
+                {isAlreadyGuessed ? 'Already Guessed!' : toastMessage}
+              </span>
+              {isAlreadyGuessed && (
+                <span className="text-xs text-orange-100 mt-1 font-normal">
+                  Try a different country
+                </span>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -539,6 +672,34 @@ export default function Home() {
     }
   }, [g, MG, gameMode, guessedCountries, st, t]);
 
+  const DiceAnimation = () => {
+    const getModeInfo = (mode: 'wordle' | 'mathle' | 'geoword') => {
+      switch (mode) {
+        case 'wordle': return { icon: <Target className="w-8 h-8" />, label: 'WORDLE', color: 'text-blue-400' };
+        case 'mathle': return { icon: <Calculator className="w-8 h-8" />, label: 'MATHLE', color: 'text-purple-400' };
+        case 'geoword': return { icon: <Globe className="w-8 h-8" />, label: 'GEOWORD', color: 'text-green-400' };
+      }
+    };
+    const modeInfo = selectedRandomMode ? getModeInfo(selectedRandomMode) : null;
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+        <div className="bg-gray-900 border border-gray-700 rounded-lg p-8 max-w-md w-full mx-4 text-center shadow-2xl">
+          <div className="flex flex-col items-center space-y-6">
+            <div className="text-6xl animate-bounce">🎲</div>
+            <h2 className="text-2xl font-bold text-white">Rolling the dice...</h2>
+            {modeInfo && (
+              <div className={`flex flex-col items-center space-y-4 animate-pulse ${modeInfo.color}`}>
+                {modeInfo.icon}
+                <div className="text-xl font-bold">{modeInfo.label}</div>
+                <div className="text-sm text-gray-400">Starting game...</div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const ModeModal = () => (
     <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
       <div className="bg-gray-900 border border-gray-700 rounded-lg p-8 max-w-md w-full mx-4 text-center shadow-2xl">
@@ -564,6 +725,13 @@ export default function Home() {
           >
             <Globe className="w-5 h-5" />
             GEOWORD
+          </button>
+          <button
+            onClick={() => selectMode('random')}
+            className="px-6 py-3 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-semibold flex items-center justify-center gap-2"
+          >
+            <Shuffle className="w-5 h-5" />
+            RANDOM
           </button>
         </div>
       </div>
@@ -606,6 +774,33 @@ export default function Home() {
       </div>
     </div>
   );
+
+  const DistanceHistory = () => {
+    if (distanceHistory.length === 0) return null;
+
+    return (
+      <div className="fixed top-1/2 left-4 -translate-y-1/2 bg-gradient-to-br from-gray-900 to-gray-800 border border-gray-600 rounded-xl p-5 max-w-xs shadow-2xl z-10 backdrop-blur-sm">
+        <div className="flex items-center justify-center mb-3">
+          <h3 className="text-white font-bold text-sm bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+            🌍 Distance History
+          </h3>
+        </div>
+        <div className="space-y-2 max-h-56 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-transparent">
+          {distanceHistory.map((entry, index) => (
+            <div key={index} className="text-xs text-gray-200 flex justify-between items-center py-1 px-2 rounded-md bg-gray-800/50 hover:bg-gray-700/50 transition-colors duration-200">
+              <div className="flex items-center truncate mr-2 min-w-0">
+                <span className={`mr-2 ${entry.flagClass} flex-shrink-0`} style={{ fontSize: entry.isSmall ? '10px' : '14px' }}></span>
+                <span className="truncate font-medium">{entry.country}</span>
+              </div>
+              <span className="text-emerald-400 font-mono font-bold text-xs flex-shrink-0 ml-1">
+                {entry.distance}mi
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
 
   const AttemptModal = () => {
     const guessCoords = getCountryCoords(lastGuess);
@@ -727,6 +922,14 @@ export default function Home() {
     );
   }
 
+  if (isRollingDice) {
+    return (
+      <div className="h-screen w-screen bg-black text-white flex flex-col items-center justify-center">
+        <DiceAnimation />
+      </div>
+    );
+  }
+
   if (showModeModal) {
     return (
       <div className="h-screen w-screen bg-black text-white flex flex-col items-center justify-center">
@@ -769,6 +972,7 @@ export default function Home() {
         )}
       </div>
 
+      {gameMode === 'geoword' && <DistanceHistory />}
       {showModal && <GameModal />}
       {showAttemptModal && <AttemptModal />}
     </div>
