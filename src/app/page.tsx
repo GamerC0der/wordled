@@ -6,8 +6,42 @@ import dynamic from 'next/dynamic';
 
 const Globe3D = dynamic(() => import('../components/Globe'), { ssr: false });
 
-type S = 'correct' | 'present' | 'absent' | 'empty';
-type G = { char: string; state: S }[];
+  type S = 'correct' | 'present' | 'absent' | 'empty';
+  type G = { char: string; state: S }[];
+
+  const calculateDistance = (lat1: number, lng1: number, lat2: number, lng2: number): number => {
+    const R = 3959; // Earth's radius in miles
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLng = (lng2 - lng1) * Math.PI / 180;
+    const a =
+      Math.sin(dLat/2) * Math.sin(dLat/2) +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+      Math.sin(dLng/2) * Math.sin(dLng/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return Math.round(R * c);
+  };
+
+  const getCountryCoords = (countryName: string) => {
+    const country = [
+      { name: 'AUSTRALIA', lat: -25, lng: 135 },
+      { name: 'BRAZIL', lat: -15, lng: -55 },
+      { name: 'CANADA', lat: 60, lng: -100 },
+      { name: 'CHINA', lat: 35, lng: 105 },
+      { name: 'FRANCE', lat: 46, lng: 2 },
+      { name: 'GERMANY', lat: 51, lng: 10 },
+      { name: 'INDIA', lat: 20, lng: 78 },
+      { name: 'ITALY', lat: 41, lng: 12 },
+      { name: 'JAPAN', lat: 36, lng: 138 },
+      { name: 'MEXICO', lat: 23, lng: -102 },
+      { name: 'POLAND', lat: 52, lng: 19 },
+      { name: 'RUSSIA', lat: 60, lng: 100 },
+      { name: 'SPAIN', lat: 40, lng: -4 },
+      { name: 'SWEDEN', lat: 60, lng: 15 },
+      { name: 'TURKEY', lat: 39, lng: 35 },
+      { name: 'UKRAINE', lat: 49, lng: 32 }
+    ].find(c => c.name === countryName);
+    return country ? { lat: country.lat, lng: country.lng } : null;
+  };
 
 export default function Home() {
   const [t, sT] = useState('');
@@ -18,6 +52,7 @@ export default function Home() {
   const [l, sL] = useState(true);
   const [e, sE] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
+  const [showAttemptModal, setShowAttemptModal] = useState(false);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
   const [flippingRow, setFlippingRow] = useState<number | null>(null);
   const [flippingTiles, setFlippingTiles] = useState<Set<number>>(new Set());
@@ -40,6 +75,7 @@ export default function Home() {
     geoGamesWon: 0,
   });
   const [guessedCountries, setGuessedCountries] = useState<string[]>([]);
+  const [lastGuess, setLastGuess] = useState<string>('');
 
   const WL = gameMode === 'mathle' ? 8 : gameMode === 'geoword' ? 6 : 5;
   const MG = 6;
@@ -124,8 +160,9 @@ export default function Home() {
         setGameMode(mode);
       }
 
-      const fileName = gameMode === 'mathle' ? '/math-expressions.txt' :
-                      gameMode === 'geoword' ? '/countries.txt' : '/common-words.txt';
+      const currentMode = mode !== undefined ? mode : gameMode;
+      const fileName = currentMode === 'mathle' ? '/math-expressions.txt' :
+                      currentMode === 'geoword' ? '/countries.txt' : '/common-words.txt';
       const response = await fetch(fileName);
       const text = await response.text();
       const words = text.split('\n')
@@ -134,12 +171,14 @@ export default function Home() {
 
       const allWords = [...new Set(words)];
       sWL(allWords);
+      console.log('Loaded words for', currentMode, ':', allWords);
       if (allWords.length === 0) {
-        throw new Error(`No ${gameMode === 'mathle' ? 'equations' : gameMode === 'geoword' ? 'countries' : 'words'} loaded`);
+        throw new Error(`No ${currentMode === 'mathle' ? 'equations' : currentMode === 'geoword' ? 'countries' : 'words'} loaded`);
       }
-      const selectedWord = gameMode === 'mathle'
+      const selectedWord = (currentMode === 'mathle' || currentMode === 'geoword')
         ? allWords[Math.floor(Math.random() * allWords.length)]
         : await selectEasiestWord(allWords);
+      console.log('Selected word:', selectedWord);
 
       sT(selectedWord);
     } catch (error) {
@@ -158,11 +197,13 @@ export default function Home() {
   }, [fW]);
 
   const r = useCallback(async () => {
+    sT(''); // Reset target word first
     await fW();
     sG([]);
     sC('');
     sSt('playing');
     setShowModal(false);
+    setShowAttemptModal(false);
     sE(null);
     setFlippingRow(null);
     setFlippingTiles(new Set());
@@ -170,7 +211,8 @@ export default function Home() {
     setFadingTiles(new Set());
     setLetterStates({});
     setGuessedCountries([]);
-  }, [fW, sE]);
+    setLastGuess('');
+  }, [fW, sE, sT]);
 
   const ch = useCallback((guess: string): G => {
     const r: G = [], tt = [...t];
@@ -207,10 +249,15 @@ export default function Home() {
 
     const newGuessedCountries = [...guessedCountries, countryName];
     setGuessedCountries(newGuessedCountries);
+    setLastGuess(countryName);
 
     const isCorrect = countryName === t;
     const newAttempts = newGuessedCountries.length;
     const newState = isCorrect ? 'won' : newAttempts === MG ? 'lost' : 'playing';
+
+    if (!isCorrect) {
+      setShowAttemptModal(true);
+    }
 
     sSt(newState);
 
@@ -254,6 +301,7 @@ export default function Home() {
     const ng = ch(c);
     const ngs = [...g, ng];
     sG(ngs);
+    setLastGuess(c);
     sC('');
 
     const currentRowIndex = g.length;
@@ -272,6 +320,7 @@ export default function Home() {
     setTimeout(() => {
       setFlippingRow(null);
       setFlippingTiles(new Set());
+      setShowAttemptModal(true);
     }, WL * 150 + 600);
 
     const newLetterStates = { ...letterStates };
@@ -534,10 +583,10 @@ export default function Home() {
           }
         </p>
         <p className="text-xl mb-6 text-white font-mono font-bold">
-          The word was: <span className="text-blue-400">{t}</span>
+          {gameMode === 'geoword' ? 'The country was:' : 'The word was:'} <span className="text-blue-400">{t}</span>
         </p>
         <div className="flex gap-3 justify-center">
-          {(st === 'won' || st === 'lost') && (
+          {(st === 'won' || st === 'lost') && gameMode !== 'geoword' && (
           <button
             onClick={() => shareResult().catch(error => {
             })}
@@ -557,6 +606,36 @@ export default function Home() {
       </div>
     </div>
   );
+
+  const AttemptModal = () => {
+    const guessCoords = getCountryCoords(lastGuess);
+    const targetCoords = getCountryCoords(t);
+    const distance = guessCoords && targetCoords ? calculateDistance(guessCoords.lat, guessCoords.lng, targetCoords.lat, targetCoords.lng) : null;
+
+    return (
+      <div className="fixed inset-0 flex items-center justify-center z-50">
+        <div className="bg-gray-900 border border-gray-700 rounded-lg p-8 max-w-sm w-full mx-4 text-center shadow-2xl">
+          <p className="text-lg mb-2 text-white">
+            You guessed: <span className="text-blue-400 font-mono font-bold">{lastGuess}</span>
+          </p>
+          {gameMode === 'geoword' && distance !== null && (
+            <p className="text-md mb-4 text-gray-300">
+              Distance is <span className="text-green-400 font-bold">{distance} miles</span>
+            </p>
+          )}
+          <div className="flex justify-center">
+            <button
+              onClick={() => setShowAttemptModal(false)}
+              className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold text-lg transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
+            >
+              Continue
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   useEffect(() => {
     const updateDimensions = () => {
       setDimensions({
@@ -691,6 +770,7 @@ export default function Home() {
       </div>
 
       {showModal && <GameModal />}
+      {showAttemptModal && <AttemptModal />}
     </div>
   );
 }
